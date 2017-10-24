@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 
-
+generalized_dmp_trajectory_path = "/home/tony/ros/indigo/baxter_ws/src/birl_baxter/birl_baxter_dmp/dmp/online_dmp/go_back_position_dmp_1.txt"
 class Dmp(object):
 
 
@@ -64,25 +64,24 @@ class Dmp(object):
 
 
 
-def main( starting_angles, ending_angles ):
+def main():
     dmp = Dmp()
 
     import pickle
-    resp = pickle.load(open("resp.pkl", "rb"))  # read data from resp.pkl
+    resp = pickle.load(open("baxter_resp.pkl", "rb"))  # read data from resp.pkl
     #Set it as the active DMP
 
     dmp.makeSetActiveRequest(resp.dmp_list)
 
     #Now, generate a plan
 
-    x_0 = starting_angles
+    x_0 = [0.00841376457006,-0.550830582514,-0.00341249959604,0.757110843807,-0.00145716173142,1.25659545195,-0.00507347181644]
 
-    x_dot_0 = [0.4, 0.4, 0.4, 0.4, 0.4, 0.0, 0.4]
+    x_dot_0 = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     t_0 = 0 # better to choose the starting time in the record file
 
-    #goal =[ joint0_data[-1],joint1_data[-1], joint2_data[-1], joint3_data[-1],joint4_data[-1],joint5_data[-1], joint6_data[-1]         ]
-    goal = ending_angles
+    goal = [0.145728174849,-1.01089333922,-0.260393238744,0.893543808943,0.107378655152,1.28816036663,0.145728174849]
     goal_thresh = [0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
 
     seg_length = -1          #Plan until convergence to goal
@@ -126,32 +125,26 @@ def main( starting_angles, ending_angles ):
     joint5_data_plan = np.interp(resample_t0, plan.plan.times, Column5_plan)
     joint6_data_plan = np.interp(resample_t0, plan.plan.times, Column6_plan)
 
-    f1, axarr1 = plt.subplots(7, sharex=True)
-    axarr1[0].plot(plan.plan.times, joint0_data_plan)
-    axarr1[0].set_title('right_arm_joint_space1')
-    axarr1[1].plot(plan.plan.times, joint1_data_plan)
-    axarr1[2].plot(plan.plan.times, joint2_data_plan)
-    axarr1[3].plot(plan.plan.times, joint3_data_plan)
-    axarr1[4].plot(plan.plan.times, joint4_data_plan)
-    axarr1[5].plot(plan.plan.times, joint5_data_plan)
-    axarr1[6].plot(plan.plan.times, joint6_data_plan)
-    #plt.show()
-    traj_to_ret = []
-    rospy.loginfo("run to traj_to_ret")
+    
+    WriteFileDir = generalized_dmp_trajectory_path   ## the path of generated dmp traj
+    plan_len = len(plan.plan.times)
+    f = open(WriteFileDir,'w')
+    f.write('time,')
+    f.write('right_s0,')
+    f.write('right_s1,')
+    f.write('right_e0,')
+    f.write('right_e1,')
+    f.write('right_w0,')
+    f.write('right_w1,')
+    f.write('right_w2\n')
+        
     for i in range(len(plan.plan.times)):
-        traj_to_ret.append(
-            [
-                resample_t0[i],
-                joint0_data_plan[i],
-                joint1_data_plan[i],
-                joint2_data_plan[i],
-                joint3_data_plan[i],
-                joint4_data_plan[i],
-                joint5_data_plan[i],
-                joint6_data_plan[i],
-            ]
-        )
-    return traj_to_ret
+        f.write("%f," % (resample_t0[i],))
+        f.write(str(joint0_data_plan[i])+','+str(joint1_data_plan[i])+','+str(joint2_data_plan[i])+','
+        +str(joint3_data_plan[i])+','+str(joint4_data_plan[i])+','+str(joint5_data_plan[i])+','+str(joint6_data_plan[i])
+        +'\n')        
+    f.close()
+   
 
 
 if __name__ == '__main__':

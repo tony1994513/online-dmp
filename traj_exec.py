@@ -22,7 +22,8 @@ class TarjExec(multiprocessing.Process):
         rs.enable()
 
         right = baxter_interface.Limb('right')
-        right.move_to_neutral()
+
+        #rospy.loginfo("move to neutral")
         joint_cmd_names = [
             'right_s0',
             'right_s1',

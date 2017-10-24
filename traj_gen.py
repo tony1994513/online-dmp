@@ -14,21 +14,35 @@ class TarjGen(multiprocessing.Process):
 
     def run(self):
         rospy.init_node("TarjGen")
-
         rospy.loginfo("TarjGen run")
-        filename = "../pick_place_data/go_to_hover_position_dmp.txt"
-        # dmp_run.map_file(filename, 1)
 
-        record_trajectory_path = "go_to_pick_position.txt"
-        generalized_dmp_trajectory_path = "go_to_pick_position_dmp.txt"
+
+
+
         limb = 'right'
         limb_interface = baxter_interface.limb.Limb(limb)
+        limb_interface.move_to_neutral()
+        rospy.loginfo("move to neutral")
+        joint_cmd_names = [
+            'right_s0',
+            'right_s1',
+            'right_e0',
+            'right_e1',
+            'right_w0',
+            'right_w1',
+            'right_w2',
+        ]
+        move_to_start_position=[0.00841376457006,-0.550830582514,-0.00341249959604,0.757110843807,-0.00145716173142,1.25659545195,-0.00507347181644]
+        limb_interface.move_to_joint_positions(dict(zip(joint_cmd_names, move_to_start_position)))
+        rospy.loginfo("move to starting position")
+
+
         starting_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
         ending_angles = [0.603621440033, -0.680703974624, -0.0709466114397,
                          1.06650014278, -0.00920388472731, 1.1780972451, -0.39883500485]
 
         traj_start_time = time.time()
-        traj_to_ret = dmp_traj_gen.main(record_trajectory_path, generalized_dmp_trajectory_path, starting_angles,
+        traj_to_ret = dmp_traj_gen.main( starting_angles,
                           ending_angles)
         rospy.loginfo("traj service done at %s"%(time.time()-traj_start_time,))
 
@@ -44,8 +58,7 @@ class TarjGen(multiprocessing.Process):
                 # get latest starting_angles
                 # get latest ending_angles
                 traj_start_time = time.now()
-                dmp_traj_gen.main(record_trajectory_path, generalized_dmp_trajectory_path, starting_angles,
-                                  ending_angles)
+                dmp_traj_gen.main( starting_angles,  ending_angles)
                 # add traj_start_time to every timestamp in latest generated traj
                 # b.c. timestamps in traj start from 0
 

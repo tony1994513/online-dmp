@@ -70,6 +70,6 @@ if __name__ == '__main__':
     resp = makeLFDRequest(dims, traj, dt, K, D, num_bases)
 
     import pickle
-    pickle.dump(resp, open("resp.pkl", "wb"))
+    pickle.dump(resp, open("simple_dmp_list.pkl", "wb"))
 
 
