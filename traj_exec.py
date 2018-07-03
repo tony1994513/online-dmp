@@ -22,8 +22,6 @@ class TarjExec(multiprocessing.Process):
         rs.enable()
 
         right = baxter_interface.Limb('right')
-
-        #rospy.loginfo("move to neutral")
         joint_cmd_names = [
             'right_s0',
             'right_s1',
@@ -35,18 +33,20 @@ class TarjExec(multiprocessing.Process):
         ]
 
         traj_to_exec = self.com_queue.get()
+        
         while True:
             if not self.com_queue.empty():
                 traj_to_exec = self.com_queue.get()
-
+                print "traj_to_exec %s" %traj_to_exec 
             if len(traj_to_exec) != 0:
                 current_goal = traj_to_exec[0]
                 del traj_to_exec[0]
 
                 set_until_time = current_goal[0]
 
-                rospy.loginfo("%s %s %s"%(time.time(),set_until_time, time.time() < set_until_time))
-                while time.time() < set_until_time:
-                    right.set_joint_positions(dict(zip(joint_cmd_names, current_goal[1:])))
+                # rospy.loginfo("%s %s %s"%(time.time(),set_until_time, time.time() < set_until_time))
+                
+                right.set_joint_positions(dict(zip(joint_cmd_names, current_goal[1:])))
+                time.sleep(0.03)
             else:
                 break

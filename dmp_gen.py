@@ -68,7 +68,7 @@ def main( starting_angles, ending_angles ):
     dmp = Dmp()
 
     import pickle
-    resp = pickle.load(open("resp.pkl", "rb"))  # read data from resp.pkl
+    resp = pickle.load(open("baxter_resp.pkl", "rb"))  # read data from resp.pkl
     #Set it as the active DMP
 
     dmp.makeSetActiveRequest(resp.dmp_list)
