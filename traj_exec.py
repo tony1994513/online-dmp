@@ -49,6 +49,6 @@ class TarjExec(multiprocessing.Process):
                 # rospy.loginfo("%s %s %s"%(time.time(),set_until_time, time.time() < set_until_time))
                 
                 right.set_joint_positions(dict(zip(joint_cmd_names, current_goal[1:])))
-                time.sleep(0.02)
+                # time.sleep(0.02)
             else:
                 break

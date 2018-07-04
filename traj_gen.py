@@ -4,15 +4,29 @@ import time
 import dmp_gen as dmp_traj_gen
 import rospy
 import ipdb
-from std_srvs.srv import Trigger
+from std_srvs.srv import Trigger,TriggerResponse
+from multiprocessing import Queue
 
-target_changed = False
-target_pose = None
+limb_interface =None
+queue = None
 
-def callback(msg):
-    target_changed = msg.flag
-    target_pose = msg.pose
+def callback(req):
+    traj_start_time = time.time()
+    resp = TriggerResponse()
+    resp.success = True
     
+    starting_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
+    ending_angles = [ 0.8502088516854905, -0.9564370212465555,0.12310195822780445, 0.9618059540041545, 0.014956312681882784, 1.6689710972193301, 0.06979612584878632]
+    latest_traj = dmp_traj_gen.main( starting_angles,  ending_angles)
+    traj_to_ret = latest_traj
+    global queue
+    queue = Queue()
+    for line in traj_to_ret:
+        queue.put(line)
+    print "traj done in callback %s" %(time.time()-traj_start_time)
+    # print "get into callback"
+    return resp
+
 class TarjGen(multiprocessing.Process):
     def __init__(
         self,
@@ -24,12 +38,9 @@ class TarjGen(multiprocessing.Process):
         # self.traget_changed_Flag = traget_changed_Flag
     def run(self):
         rospy.init_node("TarjGen")
-        rospy.loginfo("TarjGen run")
-
-        trigger = rospy.ServiceProxy('/task_change_flag', Trigger,callback)
-        resp = trigger()
-
+        rospy.loginfo("TarjGen run")    
         limb = 'right'
+        global limb_interface
         limb_interface = baxter_interface.limb.Limb(limb)
         limb_interface.move_to_neutral()
         rospy.loginfo("move to neutral")
@@ -54,50 +65,38 @@ class TarjGen(multiprocessing.Process):
         traj_start_time = time.time()
         traj_to_ret = dmp_traj_gen.main( starting_angles,
                           ending_angles)
-       
+        global queue
+        queue = Queue()
+        for line in traj_to_ret:
+            queue.put(line)
         rospy.loginfo("traj service done at %s"%(time.time()-traj_start_time,))
 
         # add traj_start_time to every timestamp in latest generated traj
         # b.c. timestamps in traj start from 0
-        for idx in range(len(traj_to_ret)):
-            traj_to_ret[idx][0] += traj_start_time
-
+        # for idx in range(len(traj_to_ret)):
+        #     traj_to_ret[idx][0] += traj_start_time
+        trigger = rospy.Service('/task_change_flag', Trigger, callback)
         while not rospy.is_shutdown():
-            if target_changed == False:
-                for idx, lines in enumerate(traj_to_ret):
-                    self.com_queue.put(lines)
-                    time.sleep(0.1)
-            else:
-                starting_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
-                ending_angles = [ 0.4398689909261424, -1.1060001480653834, 0.23584954613738238, 1.2605487124448387,-0.2389175077131532, 1.3656263964149895, -0.10776215034895031,]
-                latest_traj = dmp_traj_gen.main( starting_angles,  ending_angles)
-                print "get lasted trajectory"
-                for lines in latest_traj:
-                    self.com_queue.put(lines)
-                target_changed = False
-
-
-        rospy.loginfo("traj gen done at %s"%(time.time()-traj_start_time,))
-        target_changed = False
-        while True: 
-            # time.sleep(5)
-            # global target_changed 
-           
-            if target_changed:
-                # get latest starting_angles
-                # get latest ending_angles
-                # traj_start_time = time.now()
-                print "target changed"
-                starting_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
-                ending_angles = [ 0.4398689909261424, -1.1060001480653834, 0.23584954613738238, 1.2605487124448387,-0.2389175077131532, 1.3656263964149895, -0.10776215034895031,]
-                latest_traj = dmp_traj_gen.main( starting_angles,  ending_angles)
+                try: 
+                    var = queue.get(timeout=0)
+                except:
+                    continue
+                rospy.sleep(0.05)
+                self.com_queue.put(var)
+                # print var
                 
-                # time.sleep(5)
-                # add traj_start_time to every timestamp in latest generated traj
-                # b.c. timestamps in traj start from 0
-                for lines in latest_traj:
-                    self.com_queue.put(lines)
-                target_changed = False
-            else:
-                pass
-            time.sleep(1)
+                
+            #     time.sleep(0.1)
+            #     print idx
+            #     if idx == 150:
+            #         print idx
+            #         break
+            # starting_angles = [limb_interface.joint_angle(joint) for joint in limb_interface.joint_names()]
+            # ending_angles = [ 0.7424467013365402, -0.8743690490946858,0.17487380981893716, 0.7121505807758033,
+            #  0.06481068828815872, 1.7092380929013222, -0.21015536794030168]
+            # latest_traj = dmp_traj_gen.main( starting_angles,  ending_angles)
+            # traj_to_ret = latest_traj
+            # for idx, lines in enumerate(traj_to_ret):
+            #     self.com_queue.put(lines)
+            # time.sleep(30)
+        
